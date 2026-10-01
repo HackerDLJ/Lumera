@@ -1,0 +1,44 @@
+{
+  "model_name": "Lumera RGB Research Baseline",
+  "model_version": "0.1.0",
+  "task": "binary_anemia_screening",
+  "features": [
+    "red_percent",
+    "green_percent",
+    "blue_percent"
+  ],
+  "normalization": {
+    "mean": [45.654175, 28.87550673076923, 25.470325000000003],
+    "std": [2.802721327146927, 1.5467845985403461, 1.9751067524581474]
+  },
+  "logistic_regression": {
+    "coefficients": [-0.4868029018455612, 1.640084952592022, -0.593566882085709],
+    "intercept": -0.7039785808192356,
+    "positive_class": "possible_anemia"
+  },
+  "decision_threshold": 0.5,
+  "training": {
+    "samples": 104,
+    "positive_samples": 26,
+    "negative_samples": 78,
+    "class_weight": "balanced",
+    "seed": 42
+  },
+  "cross_validation_5fold": {
+    "accuracy_mean": 0.7780952380952382,
+    "accuracy_std": 0.07411457698416656,
+    "precision_mean": 0.5599999999999999,
+    "recall_mean": 0.8466666666666667,
+    "f1_mean": 0.6652197802197802,
+    "roc_auc_mean": 0.8818611111111112
+  },
+  "full_dataset_fit": {
+    "accuracy": 0.7980769230769231,
+    "roc_auc": 0.8932445759368837
+  },
+  "provenance": {
+    "source_repository": "shivombansal/Anemia-Detection-using-conjunctiva-images",
+    "source_file": "Anemia.csv",
+    "note": "Research baseline trained from RGB percentage features. Not clinically validated."
+  }
+}
