@@ -8,17 +8,17 @@ from typing import Any
 import httpx
 
 
-class GeminiVisionError(RuntimeError):
+class VisionServiceError(RuntimeError):
     pass
 
 
-class GeminiVisionService:
-    """Gemini is used as a visual quality/region assistant, not as the anemia model."""
+class VisionService:
+    """Private vision provider used only for image quality and region checks."""
 
     def __init__(self) -> None:
-        self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
-        self.model = os.getenv("GEMINI_VISION_MODEL", "gemini-3.8-flash").strip()
-        self.timeout = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30"))
+        self.api_key = os.getenv("VISION_API_KEY", "").strip()
+        self.model = os.getenv("VISION_MODEL", "gemini-3.8-flash").strip()
+        self.timeout = float(os.getenv("VISION_TIMEOUT_SECONDS", "30"))
 
     @property
     def configured(self) -> bool:
@@ -26,10 +26,10 @@ class GeminiVisionService:
 
     async def inspect_image(self, image_bytes: bytes, mime_type: str) -> dict[str, Any]:
         if not self.configured:
-            raise GeminiVisionError("GEMINI_API_KEY is not configured.")
+            raise VisionServiceError("Vision service is not configured.")
 
         if mime_type not in {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}:
-            raise GeminiVisionError("Unsupported image type.")
+            raise VisionServiceError("Unsupported image type.")
 
         prompt = """
 You are Lumera's image-quality and region-recognition assistant.
@@ -83,21 +83,21 @@ Rules:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(url, headers=headers, json=payload)
         except httpx.HTTPError as exc:
-            raise GeminiVisionError(f"Gemini request failed: {exc}") from exc
+            raise VisionServiceError(f"Vision request failed: {exc}") from exc
 
         if response.status_code >= 400:
-            raise GeminiVisionError(f"Gemini API returned HTTP {response.status_code}.")
+            raise VisionServiceError(f"Vision service returned HTTP {response.status_code}.")
 
         try:
             body = response.json()
             text = body["candidates"][0]["content"]["parts"][0]["text"]
             result = json.loads(text)
         except (KeyError, IndexError, TypeError, ValueError) as exc:
-            raise GeminiVisionError("Gemini returned an invalid structured response.") from exc
+            raise VisionServiceError("Vision service returned an invalid structured response.") from exc
 
         required = {"usable", "region", "quality", "issues", "explanation"}
         if not required.issubset(result):
-            raise GeminiVisionError("Gemini response is missing required fields.")
+            raise VisionServiceError("Vision response is missing required fields.")
 
         return {
             "usable": bool(result["usable"]),
@@ -105,5 +105,4 @@ Rules:
             "quality": str(result["quality"]),
             "issues": [str(item) for item in result["issues"]],
             "explanation": str(result["explanation"])[:300],
-            "model": self.model,
         }
