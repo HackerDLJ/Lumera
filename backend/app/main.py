@@ -1,6 +1,9 @@
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from dotenv import load_dotenv
 
 from .gemini_vision import VisionServiceError, VisionService
+
+load_dotenv("backend/.env")
 
 app = FastAPI(title="Lumera API", version="0.2.0")
 vision = VisionService()
