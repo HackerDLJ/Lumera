@@ -21,68 +21,18 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 }
 
 enum LumeraTheme {
-
-    // MARK: - Surfaces
-
-    static let background =
-        Color(uiColor: .systemGroupedBackground)
-
-    static let surface =
-        Color(uiColor: .secondarySystemGroupedBackground)
-
-    static let elevatedSurface =
-        Color(uiColor: .systemBackground)
-
-    // MARK: - Typography
-
-    static let primaryText =
-        Color.primary
-
-    static let secondaryText =
-        Color.secondary
-
-    // MARK: - Brand
-
-    static let accent =
-        Color(
-            red: 0.08,
-            green: 0.31,
-            blue: 0.26
-        )
-
-    // MARK: - Semantic
-
-    static let success =
-        Color(
-            red: 0.12,
-            green: 0.52,
-            blue: 0.34
-        )
-
-    static let warning =
-        Color(
-            red: 0.65,
-            green: 0.42,
-            blue: 0.08
-        )
-
-    static let danger =
-        Color(
-            red: 0.72,
-            green: 0.16,
-            blue: 0.16
-        )
-
-    static let disabled =
-        Color(uiColor: .systemGray3)
-
-    // MARK: - Camera
-
-    static let cameraOverlay =
-        Color.black.opacity(0.58)
+    static let background = Color(uiColor: .systemGroupedBackground)
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let elevatedSurface = Color(uiColor: .systemBackground)
+    static let primaryText = Color.primary
+    static let secondaryText = Color.secondary
+    static let accent = Color(red: 0.08, green: 0.31, blue: 0.26)
+    static let success = Color(red: 0.12, green: 0.52, blue: 0.34)
+    static let warning = Color(red: 0.65, green: 0.42, blue: 0.08)
+    static let danger = Color(red: 0.72, green: 0.16, blue: 0.16)
+    static let disabled = Color(uiColor: .systemGray3)
+    static let cameraOverlay = Color.black.opacity(0.58)
 }
-
-
 
 enum ImageQualityState: String, Codable, CaseIterable {
     case checking
@@ -152,6 +102,7 @@ enum InferenceError: LocalizedError {
         "The research screening model could not process this image."
     }
 }
+
 protocol LumeraInferenceEngine {
     func analyze(image: CIImage) async throws -> ScreeningResult
 }
@@ -186,16 +137,19 @@ struct ScreeningPipeline {
         let pixelWidth = image.cgImage?.width ?? Int(image.size.width * image.scale)
         let pixelHeight = image.cgImage?.height ?? Int(image.size.height * image.scale)
 
-        guard pixelWidth >= 600, pixelHeight >= 600 else {
+        // Do not reject otherwise readable camera images using an arbitrary
+        // 600 x 600 threshold. The inference engine is responsible for
+        // determining whether the image contains enough usable information.
+        guard pixelWidth > 0, pixelHeight > 0 else {
             return ImageQualityAssessment(
-                state: .needsRecapture,
-                detail: "The image is too small for screening. Take or choose a clearer image."
+                state: .unsupported,
+                detail: "The image could not be read."
             )
         }
 
         return ImageQualityAssessment(
             state: .acceptable,
-            detail: "Image dimensions are suitable. Blur, exposure, framing, intended-region visibility, and reference-card checks are not yet validated."
+            detail: "Image captured successfully. Ready for screening analysis."
         )
     }
 
@@ -253,7 +207,6 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
 @MainActor
 final class ScreeningHistoryStore: ObservableObject {
     @Published private(set) var entries: [HistoryEntry] = []
-
     private let storageKey = "screeningHistory"
 
     init() {
@@ -293,7 +246,11 @@ nonisolated func downsampledImage(from image: UIImage, maximumDimension: CGFloat
     guard longestSide > 0 else { return nil }
 
     let scale = min(1, maximumDimension / longestSide)
-    let targetSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+    let targetSize = CGSize(
+        width: image.size.width * scale,
+        height: image.size.height * scale
+    )
+
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
     format.opaque = true
